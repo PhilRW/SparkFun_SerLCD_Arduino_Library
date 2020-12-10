@@ -98,76 +98,11 @@ SerLCD::~SerLCD()
 }
 
 /*
- * Set up the i2c communication with the SerLCD.
- * wirePort - TwoWire port
- * ic2_addr - I2C address
- */
-void SerLCD::begin(TwoWire &wirePort, byte i2c_addr)
-{
-  _i2cAddr = i2c_addr;
-
-  begin(wirePort);
-} // begin
-
-/*
- * Set up the i2c communication with the SerLCD.
- */
-void SerLCD::begin(TwoWire &wirePort)
-{
-  _i2cPort = &wirePort; //Grab which port the user wants us to use
-  _serialPort = NULL;   //Set to null to be safe
-  _spiPort = NULL;      //Set to null to be safe
-
-  //Call init function since display may have been left in unknown state
-  init();
-} // begin
-
-/*
  * Set up the serial communication with the SerLCD.
  */
 void SerLCD::begin(Stream &serialPort)
 {
   _serialPort = &serialPort; //Grab which port the user wants us to use
-  _i2cPort = NULL;           //Set to null to be safe
-  _spiPort = NULL;           //Set to null to be safe
-
-  //Call init function since display may have been left in unknown state
-  init();
-} // begin
-
-//Only available in Arduino 1.6 or later
-#ifdef SPI_HAS_TRANSACTION
-/*
- * Set up the SPI communication with the SerLCD using SPI transactions
- *
- * NB we pass SPISettings by value, since many of the examples for the SPI
- * transactions create the settings object in the function call, and that only
- * works if the function passes the object by value.
- */
-void SerLCD::begin(SPIClass &spiPort, byte csPin, SPISettings spiSettings)
-{
-  _spiSettings = spiSettings;
-  _spiTransaction = true;
-
-  begin(spiPort, csPin);
-} // begin
-#endif
-
-/*
- * Set up the SPI communication with the SerLCD.
- */
-void SerLCD::begin(SPIClass &spiPort, byte csPin)
-{
-  _csPin = csPin;
-
-  pinMode(csPin, OUTPUT);    //set pin to output, in case user forgot
-  digitalWrite(csPin, HIGH); //deselect dispaly, in case user forgot
-
-  _spiPort = &spiPort; //Grab the port the user wants us to use
-  _i2cPort = NULL;     //Set to null to be safe
-  _serialPort = NULL;  //Set to null to be safe
-
-  _spiPort->begin(); //call begin, in case the user forgot
 
   //Call init function since display may have been left in unknown state
   init();
@@ -180,21 +115,6 @@ void SerLCD::begin(SPIClass &spiPort, byte csPin)
 void SerLCD::beginTransmission()
 {
   //do nothing if using serialPort
-  if (_i2cPort)
-  {
-    _i2cPort->beginTransmission(_i2cAddr); // transmit to device
-  }
-  else if (_spiPort)
-  {
-#ifdef SPI_HAS_TRANSACTION
-    if (_spiTransaction)
-    {
-      _spiPort->beginTransaction(_spiSettings); //gain control of the SPI bus
-    }                                           //if _spiSettings
-#endif
-    digitalWrite(_csPin, LOW);
-    delay(10); //wait a bit for display to enable
-  }            // if-else
 } //beginTransmission
 
 /*
@@ -204,18 +124,7 @@ void SerLCD::beginTransmission()
  */
 void SerLCD::transmit(uint8_t data)
 {
-  if (_i2cPort)
-  {
-    _i2cPort->write(data); // transmit to device
-  }
-  else if (_serialPort)
-  {
     _serialPort->write(data);
-  }
-  else if (_spiPort)
-  {
-    _spiPort->transfer(data);
-  } // if-else
 } //transmit
 
 /*
@@ -224,21 +133,6 @@ void SerLCD::transmit(uint8_t data)
 void SerLCD::endTransmission()
 {
   //do nothing if using Serial port
-  if (_i2cPort)
-  {
-    _i2cPort->endTransmission(); // transmit to device
-  }
-  else if (_spiPort)
-  {
-    digitalWrite(_csPin, HIGH); //disable display
-#ifdef SPI_HAS_TRANSACTION
-    if (_spiTransaction)
-    {
-      _spiPort->endTransaction(); //let go of the SPI bus
-    }                             //if _spiSettings
-#endif
-    delay(10); //wait a bit for display to disable
-  }            // if-else
 } //beginTransmission
 
 /*
